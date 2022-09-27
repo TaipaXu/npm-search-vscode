@@ -1,0 +1,140 @@
+{
+    "name": "npm-search",
+    "displayName": "npm search",
+    "version": "0.1.0",
+    "publisher": "TaipaXu",
+    "description": "Search Node packages in Visual Studio Code.",
+    "author": {
+        "name": "Taipa Xu",
+        "url": "https://github.com/TaipaXu"
+    },
+    "homepage": "https://github.com/TaipaXu/npm-search-vscode",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TaipaXu/npm-search-vscode"
+    },
+    "bugs": "https://github.com/TaipaXu/npm-search-vscode/issues",
+    "license": "GPL-3.0",
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "node",
+        "npm",
+        "node package",
+        "node packages",
+        "package",
+        "packages",
+        "search"
+    ],
+    "engines": {
+        "vscode": "^1.71.0"
+    },
+    "icon": "images/icon.png",
+    "activationEvents": [
+        "onCommand:npm-search.search"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "viewsWelcome": [
+            {
+                "view": "taipaxu.npmSearch",
+                "contents": "[Search](command:npm-search.search)\n Visit [this project](https://github.com/TaipaXu/npm-search-vscode)\n"
+            }
+        ],
+        "commands": [
+            {
+                "command": "npm-search.search",
+                "title": "Search",
+                "icon": "$(search)"
+            },
+            {
+                "command": "npm-search.previousPage",
+                "title": "Previous page",
+                "icon": "$(arrow-up)"
+            },
+            {
+                "command": "npm-search.nextPage",
+                "title": "Next page",
+                "icon": "$(arrow-down)"
+            },
+            {
+                "command": "npm-search.refresh",
+                "title": "Refresh",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "npm-search.openInBrowser",
+                "title": "Open in browser",
+                "icon": "$(globe)"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "taipaxu-npmSearch",
+                    "title": "npm search",
+                    "icon": "images/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "taipaxu-npmSearch": [
+                {
+                    "id": "taipaxu.npmSearch",
+                    "name": "npm search"
+                }
+            ]
+        },
+        "menus": {
+            "view/title": [
+                {
+                    "command": "npm-search.search",
+                    "when": "view == taipaxu.npmSearch",
+                    "title": "daily",
+                    "group": "navigation@0"
+                },
+                {
+                    "command": "npm-search.previousPage",
+                    "when": "view == taipaxu.npmSearch",
+                    "title": "previsou page",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "npm-search.nextPage",
+                    "when": "view == taipaxu.npmSearch",
+                    "title": "next page",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "npm-search.refresh",
+                    "when": "view == taipaxu.npmSearch",
+                    "title": "refresh",
+                    "group": "navigation@3"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "npm-search.openInBrowser",
+                    "when": "view == taipaxu.npmSearch",
+                    "title": "openInBrowser",
+                    "group": "inline"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "build-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+        "dev": "npm run build-base -- --sourcemap --watch",
+        "build": "npm run build-base -- --minify",
+        "package": "vsce package --no-dependencies"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.71.0",
+        "esbuild": "^0.15.9",
+        "vsce": "^2.11.0"
+    },
+    "dependencies": {
+        "axios": "^0.27.2"
+    }
+}
