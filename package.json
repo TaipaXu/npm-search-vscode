@@ -1,7 +1,7 @@
 {
     "name": "npm-search",
     "displayName": "npm search",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "publisher": "TaipaXu",
     "description": "Search Node packages in Visual Studio Code.",
     "author": {
@@ -28,7 +28,7 @@
         "search"
     ],
     "engines": {
-        "vscode": "^1.71.0"
+        "vscode": "^1.80.0"
     },
     "icon": "images/icon.png",
     "activationEvents": [
