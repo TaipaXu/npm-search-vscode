@@ -66,8 +66,19 @@ export const activate = (context: vscode.ExtensionContext): void => {
                         display: none;
                     }
                 </style>`;
-                const html: string = style + data.replaceAll('src="/npm-avatar', 'src="https://www.npmjs.com/npm-avatar');
+                const script: string = `
+                    <script>
+                        window.addEventListener('message', (event) => {
+                            if (event.data.type === 'init') {
+                                window.scroll(0, 0);
+                            }
+                        });
+                    </script>`
+                const html: string = style + script + data.replaceAll('src="/npm-avatar', 'src="https://www.npmjs.com/npm-avatar');
                 webviewPanel!.webview.html = html;
+                webviewPanel!.webview.postMessage({
+                    "type": "init",
+                });
             } catch (error) {
 
             }
