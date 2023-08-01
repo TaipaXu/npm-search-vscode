@@ -130,11 +130,11 @@
         "package": "vsce package --no-dependencies"
     },
     "devDependencies": {
-        "@types/vscode": "^1.71.0",
-        "esbuild": "^0.15.9",
-        "vsce": "^2.11.0"
+        "@types/vscode": "^1.80.0",
+        "esbuild": "^0.18.17",
+        "vsce": "^2.15.0"
     },
     "dependencies": {
-        "axios": "^0.27.2"
+        "axios": "^1.4.0"
     }
 }
