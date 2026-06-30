@@ -1,7 +1,7 @@
 {
     "name": "npm-search",
     "displayName": "npm search",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Search Node packages in Visual Studio Code.",
     "categories": [
         "Other"
