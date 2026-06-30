@@ -77,6 +77,11 @@
                 "command": "npm-search.openInBrowser",
                 "title": "Open in Simple Browser",
                 "icon": "$(globe)"
+            },
+            {
+                "command": "npm-search.openInSystemBrowser",
+                "title": "Open in System Browser",
+                "icon": "$(link-external)"
             }
         ],
         "viewsContainers": {
@@ -128,7 +133,13 @@
                     "command": "npm-search.openInBrowser",
                     "when": "view == taipaxu.npmSearch",
                     "title": "Open in Simple Browser",
-                    "group": "inline"
+                    "group": "inline@1"
+                },
+                {
+                    "command": "npm-search.openInSystemBrowser",
+                    "when": "view == taipaxu.npmSearch",
+                    "title": "Open in System Browser",
+                    "group": "inline@2"
                 }
             ]
         }

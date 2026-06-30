@@ -6,6 +6,11 @@ import { getErrorMessage } from './errors/message';
 const getPackagePageUri = (packageName: string): vscode.Uri =>
     vscode.Uri.parse(`https://www.npmjs.com/package/${packageName}`);
 
+const getPackageNameFromTreeItem = (item: vscode.TreeItem): string | undefined => {
+    const packageName = item.command?.arguments?.[0];
+    return typeof packageName === 'string' ? packageName : undefined;
+};
+
 const openPackageInSimpleBrowser = async (packageName: string): Promise<void> => {
     const uri = getPackagePageUri(packageName);
 
@@ -20,6 +25,10 @@ const openPackageInSimpleBrowser = async (packageName: string): Promise<void> =>
             await vscode.env.openExternal(uri);
         }
     }
+};
+
+const openPackageInSystemBrowser = async (packageName: string): Promise<void> => {
+    await vscode.env.openExternal(getPackagePageUri(packageName));
 };
 
 export const activate = (context: vscode.ExtensionContext): void => {
@@ -107,13 +116,22 @@ export const activate = (context: vscode.ExtensionContext): void => {
             }
         }),
         vscode.commands.registerCommand('npm-search.openInBrowser', (item: vscode.TreeItem) => {
-            const eventArguments = item.command?.arguments;
-            const packageName = eventArguments?.[0];
+            const packageName = getPackageNameFromTreeItem(item);
 
-            if (typeof packageName === 'string') {
+            if (packageName !== undefined) {
                 void openPackageInSimpleBrowser(packageName);
             }
         }),
+        vscode.commands.registerCommand(
+            'npm-search.openInSystemBrowser',
+            (item: vscode.TreeItem) => {
+                const packageName = getPackageNameFromTreeItem(item);
+
+                if (packageName !== undefined) {
+                    void openPackageInSystemBrowser(packageName);
+                }
+            },
+        ),
     );
 };
 
