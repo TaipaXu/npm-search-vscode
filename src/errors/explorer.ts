@@ -1,17 +1,15 @@
 export class NoInputError extends Error {
     constructor() {
-        super();
+        super('Please input something.');
 
         this.name = 'NoInputError';
-        this.message = 'Please input something.';
     }
-};
+}
 
 export class FirstPageError extends Error {
     constructor() {
-        super();
+        super('This is the first page.');
 
         this.name = 'FirstPageError';
-        this.message = 'This is the first page.';
     }
-};
+}

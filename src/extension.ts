@@ -1,62 +1,65 @@
 import * as vscode from 'vscode';
 import { ExplorerTree } from './explorerTree';
 import { getPackagePage as RGetPackagePage } from './apis/package';
+import { getErrorMessage } from './errors/message';
 
 export const activate = (context: vscode.ExtensionContext): void => {
-    const explorerTree: ExplorerTree = new ExplorerTree();
-    vscode.window.registerTreeDataProvider('taipaxu.npmSearch', explorerTree);
+    const explorerTree = new ExplorerTree();
 
     let webviewPanel: vscode.WebviewPanel | undefined;
-    const checkWebviewPanel = (): void => {
+    const getWebviewPanel = (): vscode.WebviewPanel => {
         if (webviewPanel === undefined) {
             webviewPanel = vscode.window.createWebviewPanel(
                 'npm-search',
                 'npm search',
                 vscode.ViewColumn.One,
                 {
-                    enableScripts: true
-                }
+                    enableScripts: true,
+                },
             );
             webviewPanel.onDidDispose(() => {
                 webviewPanel = undefined;
             });
         }
-    }
+
+        return webviewPanel;
+    };
 
     context.subscriptions.push(
+        vscode.window.registerTreeDataProvider('taipaxu.npmSearch', explorerTree),
         vscode.commands.registerCommand('npm-search.search', async () => {
             let searchStr: string | undefined = await vscode.window.showInputBox({
-                prompt: 'Search Packages'
+                prompt: 'Search Packages',
             });
             if (searchStr !== undefined && (searchStr = searchStr.trim()).length > 0) {
                 explorerTree.search(searchStr);
             }
         }),
-        vscode.commands.registerCommand('npm-search.previousPage', async () => {
+        vscode.commands.registerCommand('npm-search.previousPage', () => {
             try {
-                await explorerTree.previousPage();
+                explorerTree.previousPage();
             } catch (error) {
-                vscode.window.showWarningMessage(error.message);
+                void vscode.window.showWarningMessage(getErrorMessage(error));
             }
         }),
-        vscode.commands.registerCommand('npm-search.nextPage', async () => {
+        vscode.commands.registerCommand('npm-search.nextPage', () => {
             try {
-                await explorerTree.nextPage();
+                explorerTree.nextPage();
             } catch (error) {
-                vscode.window.showWarningMessage(error.message);
+                void vscode.window.showWarningMessage(getErrorMessage(error));
             }
         }),
-        vscode.commands.registerCommand('npm-search.refresh', async () => {
+        vscode.commands.registerCommand('npm-search.refresh', () => {
             try {
-                await explorerTree.refresh();
+                explorerTree.refresh();
             } catch (error) {
-                vscode.window.showWarningMessage(error.message);
+                void vscode.window.showWarningMessage(getErrorMessage(error));
             }
         }),
         vscode.commands.registerCommand('npm-search.select', async (packageName: string) => {
-            checkWebviewPanel();
+            const panel = getWebviewPanel();
 
-            webviewPanel!.title = packageName;
+            panel.title = packageName;
             try {
                 const response = await RGetPackagePage(packageName);
                 const { data } = response;
@@ -73,22 +76,30 @@ export const activate = (context: vscode.ExtensionContext): void => {
                                 window.scroll(0, 0);
                             }
                         });
-                    </script>`
-                const html: string = style + script + data.replaceAll('src="/npm-avatar', 'src="https://www.npmjs.com/npm-avatar');
-                webviewPanel!.webview.html = html;
-                webviewPanel!.webview.postMessage({
-                    "type": "init",
+                    </script>`;
+                const html: string =
+                    style +
+                    script +
+                    data.replaceAll('src="/npm-avatar', 'src="https://www.npmjs.com/npm-avatar');
+                panel.webview.html = html;
+                void panel.webview.postMessage({
+                    type: 'init',
                 });
             } catch (error) {
-
+                void vscode.window.showWarningMessage(getErrorMessage(error));
             }
         }),
         vscode.commands.registerCommand('npm-search.openInBrowser', (item: vscode.TreeItem) => {
-            const eventArguments: any[] = item.command!.arguments as any[];
-            const packageName = eventArguments[0];
-            vscode.env.openExternal(vscode.Uri.parse(`https://www.npmjs.com/package/${packageName}`));
+            const eventArguments = item.command?.arguments;
+            const packageName = eventArguments?.[0];
+
+            if (typeof packageName === 'string') {
+                void vscode.env.openExternal(
+                    vscode.Uri.parse(`https://www.npmjs.com/package/${packageName}`),
+                );
+            }
         }),
     );
 };
 
-export const deactivate = (): void => { };
+export const deactivate = (): void => {};

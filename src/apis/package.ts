@@ -1,15 +1,31 @@
-import { AxiosPromise } from 'axios';
-import request from '../request';
+import request, { type RequestResponse } from '../request';
 
 interface Params {
-    key: string | undefined,
-    currentPage: number,
-    perPage: number,
-};
+    key: string | undefined;
+    currentPage: number;
+    perPage: number;
+}
 
-export const search = (params: Params): AxiosPromise<any> => {
-    return request({
-        url: `search`,
+export interface NpmSearchResponse {
+    objects: NpmSearchItem[];
+}
+
+export interface NpmSearchItem {
+    package: NpmPackage;
+}
+
+export interface NpmPackage {
+    date?: {
+        rel?: string;
+    };
+    description?: string;
+    name: string;
+    version?: string;
+}
+
+export const search = async (params: Params): Promise<RequestResponse<NpmSearchResponse>> => {
+    return request<NpmSearchResponse>({
+        url: 'search',
         method: 'GET',
         headers: {
             'x-spiferack': 1,
@@ -22,9 +38,13 @@ export const search = (params: Params): AxiosPromise<any> => {
     });
 };
 
-export const getPackagePage = (packageName: string): AxiosPromise<any> => {
-    return request({
+export const getPackagePage = async (packageName: string): Promise<RequestResponse<string>> => {
+    return request<string>({
         url: `package/${packageName}`,
         method: 'GET',
+        headers: {
+            Accept: 'text/html',
+        },
+        responseType: 'text',
     });
 };

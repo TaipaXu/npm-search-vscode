@@ -2,39 +2,49 @@
     "name": "npm-search",
     "displayName": "npm search",
     "version": "0.1.0",
-    "publisher": "TaipaXu",
     "description": "Search Node packages in Visual Studio Code.",
-    "author": {
-        "name": "Taipa Xu",
-        "url": "https://github.com/TaipaXu"
-    },
-    "homepage": "https://github.com/TaipaXu/npm-search-vscode",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/TaipaXu/npm-search-vscode"
-    },
-    "bugs": "https://github.com/TaipaXu/npm-search-vscode/issues",
-    "license": "GPL-3.0",
     "categories": [
         "Other"
     ],
     "keywords": [
         "node",
-        "npm",
         "node package",
         "node packages",
+        "npm",
         "package",
         "packages",
         "search"
     ],
-    "engines": {
-        "vscode": "^1.71.0"
+    "homepage": "https://github.com/TaipaXu/npm-search-vscode",
+    "bugs": "https://github.com/TaipaXu/npm-search-vscode/issues",
+    "license": "GPL-3.0",
+    "author": {
+        "name": "Taipa Xu",
+        "url": "https://github.com/TaipaXu"
     },
-    "icon": "images/icon.png",
-    "activationEvents": [
-        "onCommand:npm-search.search"
-    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TaipaXu/npm-search-vscode"
+    },
+    "publisher": "TaipaXu",
     "main": "./out/extension.js",
+    "scripts": {
+        "dev": "vp build --watch --mode development",
+        "build": "vp build",
+        "type-check": "tsc --noEmit",
+        "lint": "vp lint . --fix",
+        "format": "vp fmt .",
+        "check": "vp check .",
+        "package": "vp run build && vp exec vsce package --no-dependencies",
+        "prepare": "vp config"
+    },
+    "devDependencies": {
+        "@types/node": "^24.13.2",
+        "@types/vscode": "^1.125.0",
+        "@vscode/vsce": "^3.9.2",
+        "typescript": "^6.0.3",
+        "vite-plus": "^0.2.1"
+    },
     "contributes": {
         "viewsWelcome": [
             {
@@ -123,18 +133,10 @@
             ]
         }
     },
-    "scripts": {
-        "build-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-        "dev": "npm run build-base -- --sourcemap --watch",
-        "build": "npm run build-base -- --minify",
-        "package": "vsce package --no-dependencies"
+    "icon": "images/icon.png",
+    "engines": {
+        "node": "24.17.0",
+        "vscode": "^1.125.0"
     },
-    "devDependencies": {
-        "@types/vscode": "^1.80.0",
-        "esbuild": "^0.18.17",
-        "vsce": "^2.15.0"
-    },
-    "dependencies": {
-        "axios": "^1.4.0"
-    }
+    "packageManager": "pnpm@11.5.2"
 }

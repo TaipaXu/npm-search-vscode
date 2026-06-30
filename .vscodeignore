@@ -1,0 +1,14 @@
+.vscode/**
+.vscode-test/**
+.vite-hooks/**
+src/**
+node_modules/**
+out/**/*.map
+
+.gitignore
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tsconfig.json
+vite.config.ts
+
+*.vsix
