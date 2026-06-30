@@ -1,4 +1,4 @@
-export type ResponseType = 'json' | 'text';
+export type ResponseType = 'arrayBuffer' | 'json' | 'text';
 
 export interface RequestConfig {
     url: string;
@@ -71,7 +71,12 @@ const request = async <T = unknown>(config: RequestConfig): Promise<RequestRespo
         }
 
         const responseType = config.responseType ?? detectResponseType(response);
-        const data = responseType === 'json' ? await response.json() : await response.text();
+        const data =
+            responseType === 'json'
+                ? await response.json()
+                : responseType === 'arrayBuffer'
+                  ? await response.arrayBuffer()
+                  : await response.text();
 
         return {
             data: data as T,

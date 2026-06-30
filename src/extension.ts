@@ -1,7 +1,26 @@
 import * as vscode from 'vscode';
-import { ExplorerTree } from './explorerTree';
 import { getPackagePage as RGetPackagePage } from './apis/package';
+import { ExplorerTree } from './explorerTree';
 import { getErrorMessage } from './errors/message';
+
+const getPackagePageUri = (packageName: string): vscode.Uri =>
+    vscode.Uri.parse(`https://www.npmjs.com/package/${packageName}`);
+
+const openPackageInSimpleBrowser = async (packageName: string): Promise<void> => {
+    const uri = getPackagePageUri(packageName);
+
+    try {
+        await vscode.commands.executeCommand('simpleBrowser.api.open', uri, {
+            viewColumn: vscode.ViewColumn.One,
+        });
+    } catch {
+        try {
+            await vscode.commands.executeCommand('simpleBrowser.show', uri.toString());
+        } catch {
+            await vscode.env.openExternal(uri);
+        }
+    }
+};
 
 export const activate = (context: vscode.ExtensionContext): void => {
     const explorerTree = new ExplorerTree();
@@ -14,7 +33,7 @@ export const activate = (context: vscode.ExtensionContext): void => {
                 'npm search',
                 vscode.ViewColumn.One,
                 {
-                    enableScripts: true,
+                    enableScripts: false,
                 },
             );
             webviewPanel.onDidDispose(() => {
@@ -62,29 +81,7 @@ export const activate = (context: vscode.ExtensionContext): void => {
             panel.title = packageName;
             try {
                 const response = await RGetPackagePage(packageName);
-                const { data } = response;
-                const style: string = `<style>
-                    header,
-                    footer {
-                        display: none;
-                    }
-                </style>`;
-                const script: string = `
-                    <script>
-                        window.addEventListener('message', (event) => {
-                            if (event.data.type === 'init') {
-                                window.scroll(0, 0);
-                            }
-                        });
-                    </script>`;
-                const html: string =
-                    style +
-                    script +
-                    data.replaceAll('src="/npm-avatar', 'src="https://www.npmjs.com/npm-avatar');
-                panel.webview.html = html;
-                void panel.webview.postMessage({
-                    type: 'init',
-                });
+                panel.webview.html = response.data;
             } catch (error) {
                 void vscode.window.showWarningMessage(getErrorMessage(error));
             }
@@ -94,9 +91,7 @@ export const activate = (context: vscode.ExtensionContext): void => {
             const packageName = eventArguments?.[0];
 
             if (typeof packageName === 'string') {
-                void vscode.env.openExternal(
-                    vscode.Uri.parse(`https://www.npmjs.com/package/${packageName}`),
-                );
+                void openPackageInSimpleBrowser(packageName);
             }
         }),
     );

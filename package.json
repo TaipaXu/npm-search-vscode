@@ -75,7 +75,7 @@
             },
             {
                 "command": "npm-search.openInBrowser",
-                "title": "Open in browser",
+                "title": "Open in Simple Browser",
                 "icon": "$(globe)"
             }
         ],
@@ -127,7 +127,7 @@
                 {
                     "command": "npm-search.openInBrowser",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "openInBrowser",
+                    "title": "Open in Simple Browser",
                     "group": "inline"
                 }
             ]

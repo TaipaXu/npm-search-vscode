@@ -1,9 +1,19 @@
 import * as vscode from 'vscode';
 import { search as RSearch } from './apis/package';
+import type { NpmPackage } from './apis/package';
 import { NoInputError, FirstPageError } from './errors/explorer';
 import { getErrorMessage } from './errors/message';
 
 const FIRST_PAGE = 0;
+
+const getPackageDateText = (date: NpmPackage['date']): string => {
+    if (typeof date === 'string') {
+        const parsed = new Date(date);
+        return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString();
+    }
+
+    return date?.rel ?? '';
+};
 
 export class ExplorerTree implements vscode.TreeDataProvider<vscode.TreeItem> {
     private onDidChangeTreeDataEvent = new vscode.EventEmitter<vscode.TreeItem | undefined>();
@@ -37,13 +47,14 @@ export class ExplorerTree implements vscode.TreeDataProvider<vscode.TreeItem> {
                 const packageName: string = packageInfo.name;
                 const description: string = packageInfo.description ?? '';
                 const version: string = packageInfo.version ?? '';
-                const lastUpdateTime: string = packageInfo.date?.rel ?? '';
+                const lastUpdateTime: string = getPackageDateText(packageInfo.date);
+                const nodeDescription = [version, lastUpdateTime].filter(Boolean).join(' - ');
 
                 const node: vscode.TreeItem = new vscode.TreeItem(
                     packageName,
                     vscode.TreeItemCollapsibleState.None,
                 );
-                node.description = `    ${version} - ${lastUpdateTime}`;
+                node.description = nodeDescription === '' ? undefined : `    ${nodeDescription}`;
                 node.tooltip = description;
                 node.command = {
                     command: 'npm-search.select',
