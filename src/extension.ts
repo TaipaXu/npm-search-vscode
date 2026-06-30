@@ -26,6 +26,7 @@ export const activate = (context: vscode.ExtensionContext): void => {
     const explorerTree = new ExplorerTree();
 
     let webviewPanel: vscode.WebviewPanel | undefined;
+    let packagePageController: AbortController | undefined;
     const getWebviewPanel = (): vscode.WebviewPanel => {
         if (webviewPanel === undefined) {
             webviewPanel = vscode.window.createWebviewPanel(
@@ -37,6 +38,8 @@ export const activate = (context: vscode.ExtensionContext): void => {
                 },
             );
             webviewPanel.onDidDispose(() => {
+                packagePageController?.abort();
+                packagePageController = undefined;
                 webviewPanel = undefined;
             });
         }
@@ -76,14 +79,31 @@ export const activate = (context: vscode.ExtensionContext): void => {
             }
         }),
         vscode.commands.registerCommand('npm-search.select', async (packageName: string) => {
+            packagePageController?.abort();
+            const controller = new AbortController();
+            packagePageController = controller;
             const panel = getWebviewPanel();
 
             panel.title = packageName;
             try {
-                const response = await RGetPackagePage(packageName);
+                const response = await RGetPackagePage(packageName, {
+                    signal: controller.signal,
+                });
+                if (controller.signal.aborted) {
+                    return;
+                }
+
                 panel.webview.html = response.data;
             } catch (error) {
+                if (controller.signal.aborted) {
+                    return;
+                }
+
                 void vscode.window.showWarningMessage(getErrorMessage(error));
+            } finally {
+                if (packagePageController === controller) {
+                    packagePageController = undefined;
+                }
             }
         }),
         vscode.commands.registerCommand('npm-search.openInBrowser', (item: vscode.TreeItem) => {

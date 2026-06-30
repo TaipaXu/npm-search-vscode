@@ -12,6 +12,10 @@ interface Params {
     perPage: number;
 }
 
+interface RequestOptions {
+    signal?: AbortSignal;
+}
+
 export interface NpmSearchResponse {
     objects: NpmSearchItem[];
     total?: number;
@@ -172,22 +176,37 @@ const getLatestVersion = (metadata: PackageMetadata): PackageVersion => {
     return fallback;
 };
 
+const isAbortError = (error: unknown): boolean =>
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === 'AbortError';
+
 const getDownloads = async (
     period: 'last-month' | 'last-week',
     packageName: string,
+    signal?: AbortSignal,
 ): Promise<DownloadPoint | undefined> => {
     try {
         const response = await request<DownloadPoint>({
             url: getDownloadsUrl(period, packageName),
             method: 'GET',
+            signal,
         });
         return response.data;
-    } catch {
+    } catch (error) {
+        if (isAbortError(error)) {
+            throw error;
+        }
+
         return undefined;
     }
 };
 
-const getTarballReadme = async (tarballUrl: string | undefined): Promise<string> => {
+const getTarballReadme = async (
+    tarballUrl: string | undefined,
+    signal?: AbortSignal,
+): Promise<string> => {
     if (tarballUrl === undefined) {
         return '';
     }
@@ -197,16 +216,25 @@ const getTarballReadme = async (tarballUrl: string | undefined): Promise<string>
             url: tarballUrl,
             method: 'GET',
             responseType: 'arrayBuffer',
+            signal,
         });
         return extractReadmeFromTgz(response.data) ?? '';
-    } catch {
+    } catch (error) {
+        if (isAbortError(error)) {
+            throw error;
+        }
+
         return '';
     }
 };
 
-const getReadme = async (metadata: PackageMetadata, latest: PackageVersion): Promise<string> => {
+const getReadme = async (
+    metadata: PackageMetadata,
+    latest: PackageVersion,
+    signal?: AbortSignal,
+): Promise<string> => {
     const registryReadme = metadata.readme?.trim() || latest.readme?.trim();
-    return registryReadme || getTarballReadme(latest.dist?.tarball);
+    return registryReadme || getTarballReadme(latest.dist?.tarball, signal);
 };
 
 export const search = async (params: Params): Promise<RequestResponse<NpmSearchResponse>> => {
@@ -221,17 +249,21 @@ export const search = async (params: Params): Promise<RequestResponse<NpmSearchR
     });
 };
 
-export const getPackagePage = async (packageName: string): Promise<RequestResponse<string>> => {
+export const getPackagePage = async (
+    packageName: string,
+    options: RequestOptions = {},
+): Promise<RequestResponse<string>> => {
     const response = await request<PackageMetadata>({
         url: getPackageMetadataUrl(packageName),
         method: 'GET',
+        signal: options.signal,
     });
     const metadata = response.data;
     const latest = getLatestVersion(metadata);
     const [readme, weeklyDownloads, monthlyDownloads] = await Promise.all([
-        getReadme(metadata, latest),
-        getDownloads('last-week', packageName),
-        getDownloads('last-month', packageName),
+        getReadme(metadata, latest, options.signal),
+        getDownloads('last-week', packageName, options.signal),
+        getDownloads('last-month', packageName, options.signal),
     ]);
 
     return {

@@ -6,6 +6,7 @@ export interface RequestConfig {
     headers?: Record<string, string | number | boolean>;
     params?: Record<string, string | number | boolean | null | undefined>;
     responseType?: ResponseType;
+    signal?: AbortSignal;
 }
 
 export interface RequestResponse<T = unknown> {
@@ -55,9 +56,18 @@ const detectResponseType = (response: Response): ResponseType => {
 
 const request = async <T = unknown>(config: RequestConfig): Promise<RequestResponse<T>> => {
     const controller = new AbortController();
+    const abort = (): void => {
+        controller.abort();
+    };
     const timeoutId = setTimeout(() => {
         controller.abort();
     }, TIMEOUT);
+
+    if (config.signal?.aborted) {
+        controller.abort();
+    } else {
+        config.signal?.addEventListener('abort', abort, { once: true });
+    }
 
     try {
         const response = await fetch(buildUrl(config.url, config.params), {
@@ -85,6 +95,7 @@ const request = async <T = unknown>(config: RequestConfig): Promise<RequestRespo
         };
     } finally {
         clearTimeout(timeoutId);
+        config.signal?.removeEventListener('abort', abort);
     }
 };
 
