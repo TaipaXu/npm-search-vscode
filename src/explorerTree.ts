@@ -13,7 +13,7 @@ const IS_LOADING_CONTEXT = 'npmSearch.isLoading';
 const getPackageDateText = (date: NpmPackage['date']): string => {
     if (typeof date === 'string') {
         const parsed = new Date(date);
-        return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString();
+        return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString(vscode.env.language);
     }
 
     return date?.rel ?? '';
@@ -84,7 +84,7 @@ export class ExplorerTree implements vscode.TreeDataProvider<vscode.TreeItem> {
                 node.resourceUri = treeIcon.resourceUri;
                 node.command = {
                     command: 'npm-search.select',
-                    title: 'Select',
+                    title: vscode.l10n.t('Select'),
                     arguments: [packageName],
                 };
                 nodes.push(node);

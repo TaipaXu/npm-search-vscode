@@ -140,7 +140,7 @@ export const activate = (context: vscode.ExtensionContext): void => {
         vscode.window.registerTreeDataProvider('taipaxu.npmSearch', explorerTree),
         vscode.commands.registerCommand('npm-search.search', async () => {
             let searchStr: string | undefined = await vscode.window.showInputBox({
-                prompt: 'Search npm packages',
+                prompt: vscode.l10n.t('Search npm packages'),
             });
             if (searchStr !== undefined && (searchStr = searchStr.trim()).length > 0) {
                 explorerTree.search(searchStr);

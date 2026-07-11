@@ -1,0 +1,12 @@
+{
+    "extension.displayName": "npm 搜索",
+    "extension.description": "在 Visual Studio Code 中搜索 Node 包。",
+    "viewsWelcome.contents": "[搜索](command:npm-search.search)\n 访问[项目主页](https://github.com/TaipaXu/npm-search-vscode)\n",
+    "view.title": "npm 搜索",
+    "command.search": "搜索",
+    "command.previousPage": "上一页",
+    "command.nextPage": "下一页",
+    "command.refresh": "刷新",
+    "command.openInSimpleBrowser": "在简易浏览器中打开",
+    "command.openInSystemBrowser": "在系统浏览器中打开"
+}

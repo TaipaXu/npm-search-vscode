@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import MarkdownIt from 'markdown-it';
 import sanitizeHtml from 'sanitize-html';
+import * as vscode from 'vscode';
 import type { DownloadPoint, PackageMetadata, PackageVersion, Person } from './apis/package';
 
 export interface PackagePageData {
@@ -31,6 +32,9 @@ const escapeHtml = (value: unknown): string =>
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
 
+const toScriptString = (value: string): string =>
+    JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
+
 const normalizeUrl = (value: string | undefined): string | undefined => {
     if (value === undefined) {
         return undefined;
@@ -50,7 +54,7 @@ const normalizeUrl = (value: string | undefined): string | undefined => {
 };
 
 const formatNumber = (value: number | undefined): string | undefined =>
-    value === undefined ? undefined : new Intl.NumberFormat().format(value);
+    value === undefined ? undefined : new Intl.NumberFormat(vscode.env.language).format(value);
 
 const formatBytes = (value: number | undefined): string | undefined => {
     if (value === undefined) {
@@ -74,7 +78,7 @@ const formatDate = (value: string | undefined): string | undefined => {
     }
 
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? undefined : date.toLocaleString();
+    return Number.isNaN(date.getTime()) ? undefined : date.toLocaleString(vscode.env.language);
 };
 
 const getPersonText = (person: Person | string | undefined): string => {
@@ -221,7 +225,7 @@ const renderRecordList = (title: string, values: Record<string, string> | undefi
                 )
                 .join('')}
         </ul>
-        ${entries.length > 24 ? `<p class="muted">+${entries.length - 24} more</p>` : ''}
+        ${entries.length > 24 ? `<p class="muted">${escapeHtml(vscode.l10n.t('+{0} more', entries.length - 24))}</p>` : ''}
     </section>`;
 };
 
@@ -238,16 +242,19 @@ const renderTags = (title: string, values: string[]): string => {
 };
 
 export const renderPackageReadme = (readme: string): string =>
-    readme.trim() === '' ? '<p class="empty-readme">No README found.</p>' : renderMarkdown(readme);
+    readme.trim() === ''
+        ? `<p class="empty-readme">${escapeHtml(vscode.l10n.t('No README found.'))}</p>`
+        : renderMarkdown(readme);
 
 export const renderPackageDownloads = (
     weeklyDownloads: DownloadPoint | undefined,
     monthlyDownloads: DownloadPoint | undefined,
 ): string =>
     [
-        renderFact('Weekly Downloads', formatNumber(weeklyDownloads?.downloads)),
-        renderFact('Monthly Downloads', formatNumber(monthlyDownloads?.downloads)),
-    ].join('') || '<p class="muted">Download counts are unavailable.</p>';
+        renderFact(vscode.l10n.t('Weekly Downloads'), formatNumber(weeklyDownloads?.downloads)),
+        renderFact(vscode.l10n.t('Monthly Downloads'), formatNumber(monthlyDownloads?.downloads)),
+    ].join('') ||
+    `<p class="muted">${escapeHtml(vscode.l10n.t('Download counts are unavailable.'))}</p>`;
 
 export const renderPackageHistory = (metadata: PackageMetadata, latestVersion: string): string => {
     const versions = Object.keys(metadata.versions ?? {}).sort((left, right) => {
@@ -258,14 +265,14 @@ export const renderPackageHistory = (metadata: PackageMetadata, latestVersion: s
     const maintainers = (metadata.maintainers ?? []).map(getPersonText).filter(Boolean);
     const visibleVersions = versions.slice(0, 100);
 
-    return `${renderFact('Published', formatDate(metadata.time?.[latestVersion]))}
-        ${renderFact('Modified', formatDate(metadata.time?.modified))}
-        ${renderRecordList('Distribution Tags', metadata['dist-tags'])}
+    return `${renderFact(vscode.l10n.t('Published'), formatDate(metadata.time?.[latestVersion]))}
+        ${renderFact(vscode.l10n.t('Modified'), formatDate(metadata.time?.modified))}
+        ${renderRecordList(vscode.l10n.t('Distribution Tags'), metadata['dist-tags'])}
         ${
             versions.length === 0
-                ? '<p class="muted">No version history found.</p>'
+                ? `<p class="muted">${escapeHtml(vscode.l10n.t('No version history found.'))}</p>`
                 : `<section class="side-section">
-                    <h3>Versions <span>${versions.length}</span></h3>
+                    <h3>${escapeHtml(vscode.l10n.t('Versions'))} <span>${versions.length}</span></h3>
                     <ul class="compact-list version-list">
                         ${visibleVersions
                             .map(
@@ -274,10 +281,10 @@ export const renderPackageHistory = (metadata: PackageMetadata, latestVersion: s
                             )
                             .join('')}
                     </ul>
-                    ${versions.length > visibleVersions.length ? `<p class="muted">Showing the latest ${visibleVersions.length} versions.</p>` : ''}
+                    ${versions.length > visibleVersions.length ? `<p class="muted">${escapeHtml(vscode.l10n.t('Showing the latest {0} versions.', visibleVersions.length))}</p>` : ''}
                 </section>`
         }
-        ${renderTags('Maintainers', maintainers)}`;
+        ${renderTags(vscode.l10n.t('Maintainers'), maintainers)}`;
 };
 
 export const renderPackagePage = ({ latest }: PackagePageData): string => {
@@ -291,7 +298,7 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
     const keywords = latest.keywords ?? [];
 
     return `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(vscode.env.language)}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -415,41 +422,41 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
             <article class="readme">
                 <h2>README</h2>
                 <div id="readme-content" class="deferred">
-                    <p class="deferred-copy">Loading README…</p>
-                    <button id="load-readme" type="button" hidden>Retry README</button>
+                    <p class="deferred-copy">${escapeHtml(vscode.l10n.t('Loading README…'))}</p>
+                    <button id="load-readme" type="button" hidden>${escapeHtml(vscode.l10n.t('Retry README'))}</button>
                 </div>
             </article>
             <aside class="sidebar">
                 <section id="downloads-content" class="side-section">
-                    <p class="muted">Loading download counts…</p>
+                    <p class="muted">${escapeHtml(vscode.l10n.t('Loading download counts…'))}</p>
                 </section>
                 <section class="side-section">
-                    ${renderFact('Version', latest.version)}
-                    ${renderFact('License', getLicenseText(latest.license))}
-                    ${renderFact('Unpacked Size', formatBytes(latest.dist?.unpackedSize))}
-                    ${renderFact('Total Files', formatNumber(latest.dist?.fileCount))}
-                    ${renderFact('Author', getPersonText(latest.author))}
+                    ${renderFact(vscode.l10n.t('Version'), latest.version)}
+                    ${renderFact(vscode.l10n.t('License'), getLicenseText(latest.license))}
+                    ${renderFact(vscode.l10n.t('Unpacked Size'), formatBytes(latest.dist?.unpackedSize))}
+                    ${renderFact(vscode.l10n.t('Total Files'), formatNumber(latest.dist?.fileCount))}
+                    ${renderFact(vscode.l10n.t('Author'), getPersonText(latest.author))}
                 </section>
                 <section class="side-section">
-                    <h3>Links</h3>
+                    <h3>${escapeHtml(vscode.l10n.t('Links'))}</h3>
                     <div class="link-list">
-                        ${renderLink('npm package page', packageUrl)}
-                        ${renderLink('Homepage', homepageUrl)}
-                        ${renderLink('Repository', repositoryUrl)}
-                        ${renderLink('Issues', bugsUrl)}
-                        ${renderLink('Tarball', tarballUrl)}
+                        ${renderLink(vscode.l10n.t('npm package page'), packageUrl)}
+                        ${renderLink(vscode.l10n.t('Homepage'), homepageUrl)}
+                        ${renderLink(vscode.l10n.t('Repository'), repositoryUrl)}
+                        ${renderLink(vscode.l10n.t('Issues'), bugsUrl)}
+                        ${renderLink(vscode.l10n.t('Tarball'), tarballUrl)}
                     </div>
                 </section>
-                ${renderRecordList('Dependencies', latest.dependencies)}
-                ${renderRecordList('Peer Dependencies', latest.peerDependencies)}
-                ${renderRecordList('Optional Dependencies', latest.optionalDependencies)}
-                ${renderRecordList('Dev Dependencies', latest.devDependencies)}
-                ${renderRecordList('Engines', latest.engines)}
-                ${renderTags('Keywords', keywords)}
-                ${renderTags('Maintainers', maintainers)}
+                ${renderRecordList(vscode.l10n.t('Dependencies'), latest.dependencies)}
+                ${renderRecordList(vscode.l10n.t('Peer Dependencies'), latest.peerDependencies)}
+                ${renderRecordList(vscode.l10n.t('Optional Dependencies'), latest.optionalDependencies)}
+                ${renderRecordList(vscode.l10n.t('Dev Dependencies'), latest.devDependencies)}
+                ${renderRecordList(vscode.l10n.t('Engines'), latest.engines)}
+                ${renderTags(vscode.l10n.t('Keywords'), keywords)}
+                ${renderTags(vscode.l10n.t('Maintainers'), maintainers)}
                 <div id="history-content" class="deferred">
-                    <p class="deferred-copy">Distribution tags, publish dates, and historical versions are loaded on demand.</p>
-                    <button id="load-history" type="button">Load version history</button>
+                    <p class="deferred-copy">${escapeHtml(vscode.l10n.t('Distribution tags, publish dates, and historical versions are loaded on demand.'))}</p>
+                    <button id="load-history" type="button">${escapeHtml(vscode.l10n.t('Load version history'))}</button>
                 </div>
             </aside>
         </div>
@@ -457,6 +464,7 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
         const packageName = document.querySelector('[data-package-name]').dataset.packageName;
+        const loadingText = ${toScriptString(vscode.l10n.t('Loading…'))};
 
         const requestSection = (section) => {
             const button = document.getElementById('load-' + section);
@@ -464,7 +472,7 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
                 button.hidden = true;
                 button.disabled = true;
                 button.dataset.originalText = button.textContent;
-                button.textContent = 'Loading…';
+                button.textContent = loadingText;
             }
             vscode.postMessage({ type: 'load-' + section, packageName });
         };

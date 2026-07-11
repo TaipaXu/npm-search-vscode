@@ -1,8 +1,8 @@
 {
     "name": "npm-search",
-    "displayName": "npm Search",
+    "displayName": "%extension.displayName%",
     "version": "0.2.0",
-    "description": "Search Node packages in Visual Studio Code.",
+    "description": "%extension.description%",
     "categories": [
         "Other"
     ],
@@ -51,44 +51,45 @@
         "typescript": "^6.0.3",
         "vite-plus": "^0.2.1"
     },
+    "l10n": "./l10n",
     "contributes": {
         "viewsWelcome": [
             {
                 "view": "taipaxu.npmSearch",
-                "contents": "[Search](command:npm-search.search)\n Visit [this project](https://github.com/TaipaXu/npm-search-vscode)\n"
+                "contents": "%viewsWelcome.contents%"
             }
         ],
         "commands": [
             {
                 "command": "npm-search.search",
-                "title": "Search",
+                "title": "%command.search%",
                 "icon": "$(search)"
             },
             {
                 "command": "npm-search.previousPage",
-                "title": "Previous page",
+                "title": "%command.previousPage%",
                 "enablement": "npmSearch.hasPreviousPage && !npmSearch.isLoading",
                 "icon": "$(arrow-up)"
             },
             {
                 "command": "npm-search.nextPage",
-                "title": "Next page",
+                "title": "%command.nextPage%",
                 "enablement": "npmSearch.hasNextPage && !npmSearch.isLoading",
                 "icon": "$(arrow-down)"
             },
             {
                 "command": "npm-search.refresh",
-                "title": "Refresh",
+                "title": "%command.refresh%",
                 "icon": "$(refresh)"
             },
             {
                 "command": "npm-search.openInBrowser",
-                "title": "Open in Simple Browser",
+                "title": "%command.openInSimpleBrowser%",
                 "icon": "$(globe)"
             },
             {
                 "command": "npm-search.openInSystemBrowser",
-                "title": "Open in System Browser",
+                "title": "%command.openInSystemBrowser%",
                 "icon": "$(link-external)"
             }
         ],
@@ -96,7 +97,7 @@
             "activitybar": [
                 {
                     "id": "taipaxu-npmSearch",
-                    "title": "npm Search",
+                    "title": "%view.title%",
                     "icon": "images/icon.svg"
                 }
             ]
@@ -105,7 +106,7 @@
             "taipaxu-npmSearch": [
                 {
                     "id": "taipaxu.npmSearch",
-                    "name": "npm Search"
+                    "name": "%view.title%"
                 }
             ]
         },
@@ -114,25 +115,25 @@
                 {
                     "command": "npm-search.search",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "Search",
+                    "title": "%command.search%",
                     "group": "navigation@0"
                 },
                 {
                     "command": "npm-search.previousPage",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "Previous page",
+                    "title": "%command.previousPage%",
                     "group": "navigation@1"
                 },
                 {
                     "command": "npm-search.nextPage",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "Next page",
+                    "title": "%command.nextPage%",
                     "group": "navigation@2"
                 },
                 {
                     "command": "npm-search.refresh",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "Refresh",
+                    "title": "%command.refresh%",
                     "group": "navigation@3"
                 }
             ],
@@ -140,13 +141,13 @@
                 {
                     "command": "npm-search.openInBrowser",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "Open in Simple Browser",
+                    "title": "%command.openInSimpleBrowser%",
                     "group": "inline@1"
                 },
                 {
                     "command": "npm-search.openInSystemBrowser",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "Open in System Browser",
+                    "title": "%command.openInSystemBrowser%",
                     "group": "inline@2"
                 }
             ]

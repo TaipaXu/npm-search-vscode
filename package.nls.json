@@ -1,0 +1,12 @@
+{
+    "extension.displayName": "npm Search",
+    "extension.description": "Search Node packages in Visual Studio Code.",
+    "viewsWelcome.contents": "[Search](command:npm-search.search)\n Visit [this project](https://github.com/TaipaXu/npm-search-vscode)\n",
+    "view.title": "npm Search",
+    "command.search": "Search",
+    "command.previousPage": "Previous page",
+    "command.nextPage": "Next page",
+    "command.refresh": "Refresh",
+    "command.openInSimpleBrowser": "Open in Simple Browser",
+    "command.openInSystemBrowser": "Open in System Browser"
+}

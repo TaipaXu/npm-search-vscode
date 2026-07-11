@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig(({ mode }) => ({
+    ssr: {
+        noExternal: true,
+    },
     staged: {
         '*': 'vp check --fix',
     },

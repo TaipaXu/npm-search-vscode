@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 export const getErrorMessage = (error: unknown): string => {
     if (error instanceof Error) {
         return error.message;
@@ -11,5 +13,5 @@ export const getErrorMessage = (error: unknown): string => {
         return error.toString();
     }
 
-    return 'Unknown error.';
+    return vscode.l10n.t('Unknown error.');
 };
