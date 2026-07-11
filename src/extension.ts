@@ -184,6 +184,7 @@ export const activate = (context: vscode.ExtensionContext): void => {
                 }
 
                 panel.webview.html = response.data;
+                await panel.webview.postMessage({ type: 'init' });
             } catch (error) {
                 if (controller.signal.aborted) {
                     return;

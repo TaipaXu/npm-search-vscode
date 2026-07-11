@@ -471,6 +471,11 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
 
         window.addEventListener('message', (event) => {
             const message = event.data;
+            if (message?.type === 'init') {
+                window.scroll(0, 0);
+                return;
+            }
+
             if (!message || message.packageName !== packageName) {
                 return;
             }
