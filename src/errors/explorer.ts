@@ -1,6 +1,6 @@
 export class NoInputError extends Error {
     constructor() {
-        super('Please input something.');
+        super('Please enter a search term.');
 
         this.name = 'NoInputError';
     }

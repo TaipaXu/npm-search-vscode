@@ -257,7 +257,7 @@ export const renderPackageHistory = (metadata: PackageMetadata, latestVersion: s
 
     return `${renderFact('Published', formatDate(metadata.time?.[latestVersion]))}
         ${renderFact('Modified', formatDate(metadata.time?.modified))}
-        ${renderRecordList('Dist Tags', metadata['dist-tags'])}
+        ${renderRecordList('Distribution Tags', metadata['dist-tags'])}
         ${
             versions.length === 0
                 ? '<p class="muted">No version history found.</p>'
@@ -410,7 +410,7 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
         </header>
         <div class="content">
             <article class="readme">
-                <h2>Readme</h2>
+                <h2>README</h2>
                 <div id="readme-content" class="deferred">
                     <p class="deferred-copy">Loading README…</p>
                     <button id="load-readme" type="button" hidden>Retry README</button>
@@ -445,7 +445,7 @@ export const renderPackagePage = ({ latest }: PackagePageData): string => {
                 ${renderTags('Keywords', keywords)}
                 ${renderTags('Maintainers', maintainers)}
                 <div id="history-content" class="deferred">
-                    <p class="deferred-copy">Dist tags, publish dates, and historical versions are loaded on demand.</p>
+                    <p class="deferred-copy">Distribution tags, publish dates, and historical versions are loaded on demand.</p>
                     <button id="load-history" type="button">Load version history</button>
                 </div>
             </aside>

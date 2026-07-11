@@ -6,7 +6,7 @@ Search Node packages in Visual Studio Code.
 
 ## Installation
 
-[npm search](https://marketplace.visualstudio.com/items?itemName=TaipaXu.npm-search)
+[npm Search](https://marketplace.visualstudio.com/items?itemName=TaipaXu.npm-search)
 
 ## Development & Building
 

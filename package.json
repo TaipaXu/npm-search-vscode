@@ -1,6 +1,6 @@
 {
     "name": "npm-search",
-    "displayName": "npm search",
+    "displayName": "npm Search",
     "version": "0.2.0",
     "description": "Search Node packages in Visual Studio Code.",
     "categories": [
@@ -90,7 +90,7 @@
             "activitybar": [
                 {
                     "id": "taipaxu-npmSearch",
-                    "title": "npm search",
+                    "title": "npm Search",
                     "icon": "images/icon.svg"
                 }
             ]
@@ -99,7 +99,7 @@
             "taipaxu-npmSearch": [
                 {
                     "id": "taipaxu.npmSearch",
-                    "name": "npm search"
+                    "name": "npm Search"
                 }
             ]
         },
@@ -108,25 +108,25 @@
                 {
                     "command": "npm-search.search",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "daily",
+                    "title": "Search",
                     "group": "navigation@0"
                 },
                 {
                     "command": "npm-search.previousPage",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "previsou page",
+                    "title": "Previous page",
                     "group": "navigation@1"
                 },
                 {
                     "command": "npm-search.nextPage",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "next page",
+                    "title": "Next page",
                     "group": "navigation@2"
                 },
                 {
                     "command": "npm-search.refresh",
                     "when": "view == taipaxu.npmSearch",
-                    "title": "refresh",
+                    "title": "Refresh",
                     "group": "navigation@3"
                 }
             ],
