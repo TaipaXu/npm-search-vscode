@@ -39,6 +39,7 @@ export interface NpmSearchItem {
 export interface NpmPackage {
     date?: string | { rel?: string };
     description?: string;
+    keywords?: string[];
     name: string;
     version?: string;
 }

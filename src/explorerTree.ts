@@ -3,6 +3,7 @@ import { search as RSearch } from './apis/package';
 import type { NpmPackage } from './apis/package';
 import { NoInputError, FirstPageError } from './errors/explorer';
 import { getErrorMessage } from './errors/message';
+import getPackageTreeIcon from './utils/icon';
 
 const FIRST_PAGE = 0;
 
@@ -56,6 +57,9 @@ export class ExplorerTree implements vscode.TreeDataProvider<vscode.TreeItem> {
                 );
                 node.description = nodeDescription === '' ? undefined : `    ${nodeDescription}`;
                 node.tooltip = description;
+                const treeIcon = getPackageTreeIcon(packageInfo);
+                node.iconPath = treeIcon.iconPath;
+                node.resourceUri = treeIcon.resourceUri;
                 node.command = {
                     command: 'npm-search.select',
                     title: 'Select',
