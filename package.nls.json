@@ -1,7 +1,7 @@
 {
     "extension.displayName": "npm Search",
     "extension.description": "Search Node packages in Visual Studio Code.",
-    "viewsWelcome.contents": "[Search](command:npm-search.search)\n Visit [this project](https://github.com/TaipaXu/npm-search-vscode)\n",
+    "viewsWelcome.contents": "Find the right npm package without leaving VS Code.\n[$(search) Search Packages](command:npm-search.search)\n\n$(github) **Enjoying npm Search?**\n[Star the project on GitHub](https://github.com/TaipaXu/npm-search-vscode) to help more developers discover it.",
     "view.title": "npm Search",
     "command.search": "Search",
     "command.previousPage": "Previous page",

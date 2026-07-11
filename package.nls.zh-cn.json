@@ -1,7 +1,7 @@
 {
     "extension.displayName": "npm 搜索",
     "extension.description": "在 Visual Studio Code 中搜索 Node 包。",
-    "viewsWelcome.contents": "[搜索](command:npm-search.search)\n 访问[项目主页](https://github.com/TaipaXu/npm-search-vscode)\n",
+    "viewsWelcome.contents": "无需离开 VS Code，即可快速找到合适的 npm 包。\n[$(search) 搜索 npm 包](command:npm-search.search)\n\n$(github) **喜欢 npm 搜索？**\n欢迎在 GitHub 上[为项目点个 Star](https://github.com/TaipaXu/npm-search-vscode)，让更多开发者发现它。",
     "view.title": "npm 搜索",
     "command.search": "搜索",
     "command.previousPage": "上一页",
