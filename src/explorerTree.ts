@@ -6,6 +6,7 @@ import { getErrorMessage } from './errors/message';
 import getPackageTreeIcon from './utils/icon';
 
 const FIRST_PAGE = 0;
+const HAS_QUERY_CONTEXT = 'npmSearch.hasQuery';
 const HAS_PREVIOUS_PAGE_CONTEXT = 'npmSearch.hasPreviousPage';
 const HAS_NEXT_PAGE_CONTEXT = 'npmSearch.hasNextPage';
 const IS_LOADING_CONTEXT = 'npmSearch.isLoading';
@@ -152,6 +153,11 @@ export class ExplorerTree implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
 
     private updatePaginationContext(): void {
+        void vscode.commands.executeCommand(
+            'setContext',
+            HAS_QUERY_CONTEXT,
+            this.queryKey !== undefined,
+        );
         void vscode.commands.executeCommand(
             'setContext',
             HAS_PREVIOUS_PAGE_CONTEXT,

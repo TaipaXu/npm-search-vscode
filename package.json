@@ -80,6 +80,7 @@
             {
                 "command": "npm-search.refresh",
                 "title": "%command.refresh%",
+                "enablement": "npmSearch.hasQuery && !npmSearch.isLoading",
                 "icon": "$(refresh)"
             },
             {
