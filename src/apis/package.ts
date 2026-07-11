@@ -1,10 +1,21 @@
 import { gunzipSync } from 'node:zlib';
-import { renderPackagePage } from '../packagePage';
+import { TtlLruCache } from '../cache';
+import {
+    renderPackageDownloads,
+    renderPackageHistory,
+    renderPackagePage,
+    renderPackageReadme,
+} from '../packagePage';
 import request, { type RequestResponse } from '../request';
 
 const REGISTRY_SEARCH_URL = 'https://registry.npmjs.org/-/v1/search';
 const REGISTRY_PACKAGE_URL = 'https://registry.npmjs.org/';
 const DOWNLOADS_URL = 'https://api.npmjs.org/downloads/point';
+
+const LATEST_CACHE_TTL_MS = 5 * 60 * 1000;
+const METADATA_CACHE_TTL_MS = 10 * 60 * 1000;
+const README_CACHE_TTL_MS = 30 * 60 * 1000;
+const DOWNLOAD_CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface Params {
     key: string | undefined;
@@ -92,8 +103,23 @@ export interface DownloadPoint {
     start?: string;
 }
 
+const latestCache = new TtlLruCache<string, RequestResponse<PackageVersion>>(
+    100,
+    LATEST_CACHE_TTL_MS,
+);
+// Full packuments can be several megabytes, so keep this cache deliberately small.
+const metadataCache = new TtlLruCache<string, RequestResponse<PackageMetadata>>(
+    12,
+    METADATA_CACHE_TTL_MS,
+);
+const readmeCache = new TtlLruCache<string, string>(50, README_CACHE_TTL_MS);
+const downloadCache = new TtlLruCache<string, DownloadPoint>(100, DOWNLOAD_CACHE_TTL_MS);
+
 const getPackageMetadataUrl = (packageName: string): string =>
     `${REGISTRY_PACKAGE_URL}${encodeURIComponent(packageName)}`;
+
+const getLatestPackageUrl = (packageName: string): string =>
+    `${getPackageMetadataUrl(packageName)}/latest`;
 
 const getDownloadsUrl = (period: 'last-month' | 'last-week', packageName: string): string =>
     `${DOWNLOADS_URL}/${period}/${encodeURIComponent(packageName)}`;
@@ -154,45 +180,66 @@ const extractReadmeFromTgz = (archive: ArrayBuffer): string | undefined => {
     return candidates.sort((left, right) => left.score - right.score)[0]?.content.trim();
 };
 
-const getLatestVersion = (metadata: PackageMetadata): PackageVersion => {
-    const latestTag = metadata['dist-tags']?.latest;
-    const latest = latestTag === undefined ? undefined : metadata.versions?.[latestTag];
-    if (latest !== undefined) {
-        return latest;
-    }
-
-    const latestPublishedVersion = Object.entries(metadata.time ?? {})
-        .filter(([version]) => version !== 'created' && version !== 'modified')
-        .sort((left, right) => new Date(right[1]).getTime() - new Date(left[1]).getTime())
-        .find(([version]) => metadata.versions?.[version] !== undefined)?.[0];
-    const fallback = latestPublishedVersion
-        ? metadata.versions?.[latestPublishedVersion]
-        : Object.values(metadata.versions ?? {}).at(-1);
-
-    if (fallback === undefined) {
-        throw new Error(`Unable to find package version for ${metadata.name}.`);
-    }
-
-    return fallback;
-};
-
 const isAbortError = (error: unknown): boolean =>
     typeof error === 'object' &&
     error !== null &&
     'name' in error &&
     (error as { name?: unknown }).name === 'AbortError';
 
+const getLatestPackage = async (
+    packageName: string,
+    signal?: AbortSignal,
+): Promise<RequestResponse<PackageVersion>> => {
+    const cached = latestCache.get(packageName);
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const response = await request<PackageVersion>({
+        url: getLatestPackageUrl(packageName),
+        method: 'GET',
+        signal,
+    });
+    latestCache.set(packageName, response);
+    return response;
+};
+
+const getPackageMetadata = async (
+    packageName: string,
+    signal?: AbortSignal,
+): Promise<RequestResponse<PackageMetadata>> => {
+    const cached = metadataCache.get(packageName);
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const response = await request<PackageMetadata>({
+        url: getPackageMetadataUrl(packageName),
+        method: 'GET',
+        signal,
+    });
+    metadataCache.set(packageName, response);
+    return response;
+};
+
 const getDownloads = async (
     period: 'last-month' | 'last-week',
     packageName: string,
     signal?: AbortSignal,
 ): Promise<DownloadPoint | undefined> => {
+    const cacheKey = `${period}:${packageName}`;
+    const cached = downloadCache.get(cacheKey);
+    if (cached !== undefined) {
+        return cached;
+    }
+
     try {
         const response = await request<DownloadPoint>({
             url: getDownloadsUrl(period, packageName),
             method: 'GET',
             signal,
         });
+        downloadCache.set(cacheKey, response.data);
         return response.data;
     } catch (error) {
         if (isAbortError(error)) {
@@ -228,15 +275,6 @@ const getTarballReadme = async (
     }
 };
 
-const getReadme = async (
-    metadata: PackageMetadata,
-    latest: PackageVersion,
-    signal?: AbortSignal,
-): Promise<string> => {
-    const registryReadme = metadata.readme?.trim() || latest.readme?.trim();
-    return registryReadme || getTarballReadme(latest.dist?.tarball, signal);
-};
-
 export const search = async (params: Params): Promise<RequestResponse<NpmSearchResponse>> => {
     return request<NpmSearchResponse>({
         url: REGISTRY_SEARCH_URL,
@@ -253,27 +291,55 @@ export const getPackagePage = async (
     packageName: string,
     options: RequestOptions = {},
 ): Promise<RequestResponse<string>> => {
-    const response = await request<PackageMetadata>({
-        url: getPackageMetadataUrl(packageName),
-        method: 'GET',
-        signal: options.signal,
-    });
-    const metadata = response.data;
-    const latest = getLatestVersion(metadata);
-    const [readme, weeklyDownloads, monthlyDownloads] = await Promise.all([
-        getReadme(metadata, latest, options.signal),
-        getDownloads('last-week', packageName, options.signal),
-        getDownloads('last-month', packageName, options.signal),
-    ]);
+    const response = await getLatestPackage(packageName, options.signal);
 
     return {
         ...response,
-        data: renderPackagePage({
-            latest,
-            metadata,
-            monthlyDownloads,
-            readme,
-            weeklyDownloads,
-        }),
+        data: renderPackagePage({ latest: response.data }),
     };
+};
+
+export const getPackageReadme = async (
+    packageName: string,
+    options: RequestOptions = {},
+): Promise<string> => {
+    const latestResponse = await getLatestPackage(packageName, options.signal);
+    const latest = latestResponse.data;
+    const cacheKey = `${packageName}@${latest.version}`;
+    const cached = readmeCache.get(cacheKey);
+    if (cached !== undefined) {
+        return renderPackageReadme(cached);
+    }
+
+    const readme =
+        latest.readme?.trim() || (await getTarballReadme(latest.dist?.tarball, options.signal));
+    readmeCache.set(cacheKey, readme);
+    return renderPackageReadme(readme);
+};
+
+export const getPackageHistory = async (
+    packageName: string,
+    options: RequestOptions = {},
+): Promise<string> => {
+    const response = await getPackageMetadata(packageName, options.signal);
+    const latestVersion = response.data['dist-tags']?.latest ?? '';
+    return renderPackageHistory(response.data, latestVersion);
+};
+
+export const getPackageDownloads = async (
+    packageName: string,
+    options: RequestOptions = {},
+): Promise<string> => {
+    const [weeklyDownloads, monthlyDownloads] = await Promise.all([
+        getDownloads('last-week', packageName, options.signal),
+        getDownloads('last-month', packageName, options.signal),
+    ]);
+    return renderPackageDownloads(weeklyDownloads, monthlyDownloads);
+};
+
+export const clearPackageCaches = (): void => {
+    latestCache.clear();
+    metadataCache.clear();
+    readmeCache.clear();
+    downloadCache.clear();
 };

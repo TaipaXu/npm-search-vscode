@@ -1,11 +1,8 @@
+import { randomBytes } from 'node:crypto';
 import type { DownloadPoint, PackageMetadata, PackageVersion, Person } from './apis/package';
 
 export interface PackagePageData {
     latest: PackageVersion;
-    metadata: PackageMetadata;
-    monthlyDownloads?: DownloadPoint;
-    readme: string;
-    weeklyDownloads?: DownloadPoint;
 }
 
 const toDisplayString = (value: unknown): string => {
@@ -237,31 +234,65 @@ const renderTags = (title: string, values: string[]): string => {
     </section>`;
 };
 
-export const renderPackagePage = ({
-    latest,
-    metadata,
-    monthlyDownloads,
-    readme,
-    weeklyDownloads,
-}: PackagePageData): string => {
+export const renderPackageReadme = (readme: string): string =>
+    readme.trim() === '' ? '<p class="empty-readme">No README found.</p>' : renderMarkdown(readme);
+
+export const renderPackageDownloads = (
+    weeklyDownloads: DownloadPoint | undefined,
+    monthlyDownloads: DownloadPoint | undefined,
+): string =>
+    [
+        renderFact('Weekly Downloads', formatNumber(weeklyDownloads?.downloads)),
+        renderFact('Monthly Downloads', formatNumber(monthlyDownloads?.downloads)),
+    ].join('') || '<p class="muted">Download counts are unavailable.</p>';
+
+export const renderPackageHistory = (metadata: PackageMetadata, latestVersion: string): string => {
+    const versions = Object.keys(metadata.versions ?? {}).sort((left, right) => {
+        const leftTime = new Date(metadata.time?.[left] ?? 0).getTime();
+        const rightTime = new Date(metadata.time?.[right] ?? 0).getTime();
+        return rightTime - leftTime;
+    });
+    const maintainers = (metadata.maintainers ?? []).map(getPersonText).filter(Boolean);
+    const visibleVersions = versions.slice(0, 100);
+
+    return `${renderFact('Published', formatDate(metadata.time?.[latestVersion]))}
+        ${renderFact('Modified', formatDate(metadata.time?.modified))}
+        ${renderRecordList('Dist Tags', metadata['dist-tags'])}
+        ${
+            versions.length === 0
+                ? '<p class="muted">No version history found.</p>'
+                : `<section class="side-section">
+                    <h3>Versions <span>${versions.length}</span></h3>
+                    <ul class="compact-list version-list">
+                        ${visibleVersions
+                            .map(
+                                (version) =>
+                                    `<li><code>${escapeHtml(version)}</code><span>${escapeHtml(formatDate(metadata.time?.[version]) ?? '')}</span></li>`,
+                            )
+                            .join('')}
+                    </ul>
+                    ${versions.length > visibleVersions.length ? `<p class="muted">Showing the latest ${visibleVersions.length} versions.</p>` : ''}
+                </section>`
+        }
+        ${renderTags('Maintainers', maintainers)}`;
+};
+
+export const renderPackagePage = ({ latest }: PackagePageData): string => {
+    const nonce = randomBytes(16).toString('base64');
     const packageUrl = normalizeUrl(`https://www.npmjs.com/package/${latest.name}`);
-    const homepageUrl = normalizeUrl(latest.homepage ?? metadata.homepage);
-    const repositoryUrl = getRepositoryUrl(latest.repository ?? metadata.repository);
-    const bugsUrl = getBugsUrl(latest.bugs ?? metadata.bugs);
+    const homepageUrl = normalizeUrl(latest.homepage);
+    const repositoryUrl = getRepositoryUrl(latest.repository);
+    const bugsUrl = getBugsUrl(latest.bugs);
     const tarballUrl = normalizeUrl(latest.dist?.tarball);
-    const maintainers = (latest.maintainers ?? metadata.maintainers ?? [])
-        .map(getPersonText)
-        .filter(Boolean);
-    const keywords = latest.keywords ?? metadata.keywords ?? [];
-    const modifiedAt = metadata.time?.modified;
-    const publishedAt = metadata.time?.[latest.version] ?? modifiedAt;
+    const maintainers = (latest.maintainers ?? []).map(getPersonText).filter(Boolean);
+    const keywords = latest.keywords ?? [];
 
     return `<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <style>
         :root {
             color-scheme: light dark;
@@ -271,6 +302,9 @@ export const renderPackagePage = ({
             --border: var(--vscode-panel-border);
             --link: var(--vscode-textLink-foreground);
             --code-background: var(--vscode-textCodeBlock-background);
+            --button-background: var(--vscode-button-background);
+            --button-foreground: var(--vscode-button-foreground);
+            --button-hover: var(--vscode-button-hoverBackground);
             --warning-background: var(--vscode-inputValidation-warningBackground);
             --warning-border: var(--vscode-inputValidation-warningBorder);
         }
@@ -287,6 +321,17 @@ export const renderPackagePage = ({
         }
         a { color: var(--link); text-decoration: none; }
         a:hover { text-decoration: underline; }
+        button {
+            padding: 7px 12px;
+            border: 0;
+            border-radius: 3px;
+            color: var(--button-foreground);
+            background: var(--button-background);
+            cursor: pointer;
+            font: inherit;
+        }
+        button:hover { background: var(--button-hover); }
+        button:disabled { cursor: default; opacity: .65; }
         code, pre {
             background: var(--code-background);
             border-radius: 4px;
@@ -300,7 +345,7 @@ export const renderPackagePage = ({
         h2 { margin: 0 0 16px; font-size: 22px; letter-spacing: 0; }
         h3 { margin: 0 0 10px; font-size: 14px; letter-spacing: 0; text-transform: uppercase; }
         h3 span { color: var(--muted); font-weight: 400; text-transform: none; }
-        .description, .muted, .empty-readme { color: var(--muted); }
+        .description, .muted, .empty-readme, .deferred-copy { color: var(--muted); }
         .install {
             display: inline-block;
             margin-top: 16px;
@@ -329,6 +374,9 @@ export const renderPackagePage = ({
             text-transform: none;
         }
         .readme p, .readme ul { margin: 0 0 14px; }
+        .deferred { padding: 18px; border: 1px dashed var(--border); border-radius: 6px; }
+        .deferred-copy { margin: 0 0 12px; }
+        .load-error { color: var(--vscode-errorForeground); }
         .sidebar { min-width: 0; border-left: 1px solid var(--border); padding-left: 24px; }
         .side-section { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
         .fact { margin-bottom: 12px; }
@@ -343,6 +391,7 @@ export const renderPackagePage = ({
             color: var(--muted);
         }
         .compact-list { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+        .version-list { max-height: 420px; overflow: auto; }
         @media (max-width: 840px) {
             body { padding: 20px; }
             .content { grid-template-columns: 1fr; }
@@ -352,29 +401,31 @@ export const renderPackagePage = ({
     <title>${escapeHtml(latest.name)}</title>
 </head>
 <body>
-    <main class="shell">
+    <main class="shell" data-package-name="${escapeHtml(latest.name)}">
         <header class="package-header">
             <h1>${escapeHtml(latest.name)}</h1>
-            <p class="description">${escapeHtml(latest.description ?? metadata.description ?? '')}</p>
+            <p class="description">${escapeHtml(latest.description ?? '')}</p>
             <code class="install">${escapeHtml(`npm install ${latest.name}`)}</code>
             ${latest.deprecated ? `<p class="deprecated">${escapeHtml(latest.deprecated)}</p>` : ''}
         </header>
         <div class="content">
             <article class="readme">
                 <h2>Readme</h2>
-                ${readme.trim() === '' ? '<p class="empty-readme">No README found.</p>' : renderMarkdown(readme)}
+                <div id="readme-content" class="deferred">
+                    <p class="deferred-copy">Loading README…</p>
+                    <button id="load-readme" type="button" hidden>Retry README</button>
+                </div>
             </article>
             <aside class="sidebar">
+                <section id="downloads-content" class="side-section">
+                    <p class="muted">Loading download counts…</p>
+                </section>
                 <section class="side-section">
-                    ${renderFact('Weekly Downloads', formatNumber(weeklyDownloads?.downloads))}
-                    ${renderFact('Monthly Downloads', formatNumber(monthlyDownloads?.downloads))}
                     ${renderFact('Version', latest.version)}
-                    ${renderFact('License', getLicenseText(latest.license ?? metadata.license))}
+                    ${renderFact('License', getLicenseText(latest.license))}
                     ${renderFact('Unpacked Size', formatBytes(latest.dist?.unpackedSize))}
                     ${renderFact('Total Files', formatNumber(latest.dist?.fileCount))}
-                    ${renderFact('Published', formatDate(publishedAt))}
-                    ${renderFact('Modified', formatDate(modifiedAt))}
-                    ${renderFact('Author', getPersonText(latest.author ?? metadata.author))}
+                    ${renderFact('Author', getPersonText(latest.author))}
                 </section>
                 <section class="side-section">
                     <h3>Links</h3>
@@ -386,7 +437,6 @@ export const renderPackagePage = ({
                         ${renderLink('Tarball', tarballUrl)}
                     </div>
                 </section>
-                ${renderRecordList('Dist Tags', metadata['dist-tags'])}
                 ${renderRecordList('Dependencies', latest.dependencies)}
                 ${renderRecordList('Peer Dependencies', latest.peerDependencies)}
                 ${renderRecordList('Optional Dependencies', latest.optionalDependencies)}
@@ -394,9 +444,66 @@ export const renderPackagePage = ({
                 ${renderRecordList('Engines', latest.engines)}
                 ${renderTags('Keywords', keywords)}
                 ${renderTags('Maintainers', maintainers)}
+                <div id="history-content" class="deferred">
+                    <p class="deferred-copy">Dist tags, publish dates, and historical versions are loaded on demand.</p>
+                    <button id="load-history" type="button">Load version history</button>
+                </div>
             </aside>
         </div>
     </main>
+    <script nonce="${nonce}">
+        const vscode = acquireVsCodeApi();
+        const packageName = document.querySelector('[data-package-name]').dataset.packageName;
+
+        const requestSection = (section) => {
+            const button = document.getElementById('load-' + section);
+            if (button) {
+                button.hidden = true;
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.textContent = 'Loading…';
+            }
+            vscode.postMessage({ type: 'load-' + section, packageName });
+        };
+
+        document.getElementById('load-readme').addEventListener('click', () => requestSection('readme'));
+        document.getElementById('load-history').addEventListener('click', () => requestSection('history'));
+
+        window.addEventListener('message', (event) => {
+            const message = event.data;
+            if (!message || message.packageName !== packageName) {
+                return;
+            }
+
+            const target = document.getElementById(message.section + '-content');
+            if (!target) {
+                return;
+            }
+
+            if (message.type === 'package-section') {
+                target.classList.remove('deferred');
+                target.innerHTML = message.html;
+                return;
+            }
+
+            if (message.type === 'package-section-error') {
+                const button = document.getElementById('load-' + message.section);
+                target.querySelector('.load-error')?.remove();
+                const error = document.createElement('p');
+                error.className = 'load-error';
+                error.textContent = message.error;
+                target.prepend(error);
+                if (button) {
+                    button.hidden = false;
+                    button.disabled = false;
+                    button.textContent = button.dataset.originalText;
+                }
+            }
+        });
+
+        requestSection('readme');
+        vscode.postMessage({ type: 'load-downloads', packageName });
+    </script>
 </body>
 </html>`;
 };

@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
-import { getPackagePage as RGetPackagePage } from './apis/package';
+import {
+    getPackageDownloads,
+    getPackageHistory,
+    getPackagePage as RGetPackagePage,
+    getPackageReadme,
+} from './apis/package';
 import { ExplorerTree } from './explorerTree';
 import { getErrorMessage } from './errors/message';
 
@@ -36,6 +41,77 @@ export const activate = (context: vscode.ExtensionContext): void => {
 
     let webviewPanel: vscode.WebviewPanel | undefined;
     let packagePageController: AbortController | undefined;
+    let activePackageName: string | undefined;
+    const sectionControllers = new Map<string, AbortController>();
+
+    const abortPackagePageRequests = (): void => {
+        packagePageController?.abort();
+        packagePageController = undefined;
+        for (const controller of sectionControllers.values()) {
+            controller.abort();
+        }
+        sectionControllers.clear();
+    };
+
+    const loadPackagePageSection = async (
+        panel: vscode.WebviewPanel,
+        message: unknown,
+    ): Promise<void> => {
+        if (
+            typeof message !== 'object' ||
+            message === null ||
+            !('type' in message) ||
+            !('packageName' in message)
+        ) {
+            return;
+        }
+
+        const { packageName, type } = message as { packageName?: unknown; type?: unknown };
+        if (
+            typeof packageName !== 'string' ||
+            packageName !== activePackageName ||
+            (type !== 'load-readme' && type !== 'load-history' && type !== 'load-downloads')
+        ) {
+            return;
+        }
+
+        const section = type.slice('load-'.length);
+        sectionControllers.get(section)?.abort();
+        const controller = new AbortController();
+        sectionControllers.set(section, controller);
+
+        try {
+            const html =
+                type === 'load-readme'
+                    ? await getPackageReadme(packageName, { signal: controller.signal })
+                    : type === 'load-history'
+                      ? await getPackageHistory(packageName, { signal: controller.signal })
+                      : await getPackageDownloads(packageName, { signal: controller.signal });
+
+            if (!controller.signal.aborted && packageName === activePackageName) {
+                await panel.webview.postMessage({
+                    type: 'package-section',
+                    packageName,
+                    section,
+                    html,
+                });
+            }
+        } catch (error) {
+            if (!controller.signal.aborted && packageName === activePackageName) {
+                await panel.webview.postMessage({
+                    type: 'package-section-error',
+                    packageName,
+                    section,
+                    error: getErrorMessage(error),
+                });
+            }
+        } finally {
+            if (sectionControllers.get(section) === controller) {
+                sectionControllers.delete(section);
+            }
+        }
+    };
+
     const getWebviewPanel = (): vscode.WebviewPanel => {
         if (webviewPanel === undefined) {
             webviewPanel = vscode.window.createWebviewPanel(
@@ -43,12 +119,16 @@ export const activate = (context: vscode.ExtensionContext): void => {
                 'npm search',
                 vscode.ViewColumn.One,
                 {
-                    enableScripts: false,
+                    enableScripts: true,
                 },
             );
+            const panel = webviewPanel;
+            panel.webview.onDidReceiveMessage((message) => {
+                void loadPackagePageSection(panel, message);
+            });
             webviewPanel.onDidDispose(() => {
-                packagePageController?.abort();
-                packagePageController = undefined;
+                abortPackagePageRequests();
+                activePackageName = undefined;
                 webviewPanel = undefined;
             });
         }
@@ -88,9 +168,10 @@ export const activate = (context: vscode.ExtensionContext): void => {
             }
         }),
         vscode.commands.registerCommand('npm-search.select', async (packageName: string) => {
-            packagePageController?.abort();
+            abortPackagePageRequests();
             const controller = new AbortController();
             packagePageController = controller;
+            activePackageName = packageName;
             const panel = getWebviewPanel();
 
             panel.title = packageName;
