@@ -61,11 +61,13 @@
             {
                 "command": "npm-search.previousPage",
                 "title": "Previous page",
+                "enablement": "npmSearch.hasPreviousPage && !npmSearch.isLoading",
                 "icon": "$(arrow-up)"
             },
             {
                 "command": "npm-search.nextPage",
                 "title": "Next page",
+                "enablement": "npmSearch.hasNextPage && !npmSearch.isLoading",
                 "icon": "$(arrow-down)"
             },
             {
