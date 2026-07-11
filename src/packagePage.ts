@@ -1,4 +1,6 @@
 import { randomBytes } from 'node:crypto';
+import MarkdownIt from 'markdown-it';
+import sanitizeHtml from 'sanitize-html';
 import type { DownloadPoint, PackageMetadata, PackageVersion, Person } from './apis/package';
 
 export interface PackagePageData {
@@ -107,83 +109,84 @@ const getBugsUrl = (bugs: PackageVersion['bugs']): string | undefined => {
     return normalizeUrl(bugs?.url);
 };
 
-const renderInlineMarkdown = (value: string): string =>
-    escapeHtml(value)
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/__([^_]+)__/g, '<strong>$1</strong>');
+const allowedLinkProtocols = ['http', 'https', 'mailto'];
+const allowedLinkProtocolSet = new Set(allowedLinkProtocols);
 
-const renderMarkdown = (markdown: string): string => {
-    const html: string[] = [];
-    const paragraph: string[] = [];
-    const listItems: string[] = [];
-    let codeLines: string[] = [];
-    let inCodeFence = false;
+const markdown = new MarkdownIt({
+    breaks: false,
+    html: false,
+    linkify: true,
+    typographer: false,
+});
 
-    const closeParagraph = (): void => {
-        if (paragraph.length > 0) {
-            html.push(`<p>${renderInlineMarkdown(paragraph.join(' '))}</p>`);
-            paragraph.length = 0;
-        }
-    };
-
-    const closeList = (): void => {
-        if (listItems.length > 0) {
-            html.push(`<ul>${listItems.join('')}</ul>`);
-            listItems.length = 0;
-        }
-    };
-
-    for (const line of markdown.replace(/\r\n?/g, '\n').split('\n')) {
-        if (/^\s*```/.test(line)) {
-            closeParagraph();
-            closeList();
-            if (inCodeFence) {
-                html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-                codeLines = [];
-            }
-            inCodeFence = !inCodeFence;
-            continue;
-        }
-
-        if (inCodeFence) {
-            codeLines.push(line);
-            continue;
-        }
-
-        if (line.trim() === '') {
-            closeParagraph();
-            closeList();
-            continue;
-        }
-
-        const heading = /^(#{1,6})\s+(.+)$/.exec(line);
-        if (heading) {
-            closeParagraph();
-            closeList();
-            const level = Math.min(heading[1].length + 1, 6);
-            html.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
-            continue;
-        }
-
-        const item = /^\s*[-*+]\s+(.+)$/.exec(line);
-        if (item) {
-            closeParagraph();
-            listItems.push(`<li>${renderInlineMarkdown(item[1])}</li>`);
-            continue;
-        }
-
-        paragraph.push(line.trim());
+markdown.validateLink = (url): boolean => {
+    const trimmedUrl = url.trim();
+    if (trimmedUrl.startsWith('//')) {
+        return false;
     }
 
-    closeParagraph();
-    closeList();
-    if (codeLines.length > 0) {
-        html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-    }
-
-    return html.join('\n');
+    const protocol = /^([a-z][a-z\d+.-]*):/i.exec(trimmedUrl)?.[1].toLowerCase();
+    return protocol === undefined || allowedLinkProtocolSet.has(protocol);
 };
+
+const renderMarkdown = (source: string): string =>
+    sanitizeHtml(markdown.render(source), {
+        allowedTags: [
+            'a',
+            'blockquote',
+            'br',
+            'code',
+            'del',
+            'em',
+            'h1',
+            'h2',
+            'h3',
+            'h4',
+            'h5',
+            'h6',
+            'hr',
+            'img',
+            'li',
+            'ol',
+            'p',
+            'pre',
+            'strong',
+            'table',
+            'tbody',
+            'td',
+            'th',
+            'thead',
+            'tr',
+            'ul',
+        ],
+        allowedAttributes: {
+            a: ['href', 'title', 'rel'],
+            code: ['class'],
+            img: ['src', 'alt', 'title', 'loading'],
+            ol: ['start'],
+        },
+        allowedClasses: {
+            code: [/^language-[\w-]+$/],
+        },
+        allowedSchemes: allowedLinkProtocols,
+        allowedSchemesByTag: {
+            img: ['https'],
+        },
+        allowProtocolRelative: false,
+        disallowedTagsMode: 'discard',
+        enforceHtmlBoundary: true,
+        parseStyleAttributes: false,
+        transformTags: {
+            a: (_tagName, attributes) => ({
+                tagName: 'a',
+                attribs: { ...attributes, rel: 'noopener noreferrer' },
+            }),
+            img: (_tagName, attributes) => ({
+                tagName: 'img',
+                attribs: { ...attributes, loading: 'lazy' },
+            }),
+        },
+    });
 
 const renderFact = (label: string, value: string | undefined): string => {
     if (value === undefined || value === '') {
